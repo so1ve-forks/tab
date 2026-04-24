@@ -90,18 +90,22 @@ describe.each(cliTools)('cli completion tests for %s', (cliTool) => {
   });
 
   describe.runIf(!shouldSkipTest)('boolean option handling', () => {
-    it('should not provide value completions for boolean options', async () => {
+    it('should complete subcommands and arguments after boolean options', async () => {
       const command = `${commandPrefix} dev --verbose ""`;
       const output = await runCommand(command);
-      // Boolean options should return just the directive, no completions
-      expect(output.trim()).toBe(':4');
+      // After a boolean option, should show subcommands/arguments (not flag values)
+      expect(output).toContain('build');
+      expect(output).toContain('start');
+      expect(output).not.toContain('verbose');
     });
 
-    it('should not provide value completions for short boolean options', async () => {
+    it('should complete subcommands and arguments after short boolean options', async () => {
       const command = `${commandPrefix} dev -v ""`;
       const output = await runCommand(command);
-      // Boolean options should return just the directive, no completions
-      expect(output.trim()).toBe(':4');
+      // After a short boolean option, should show subcommands/arguments (not flag values)
+      expect(output).toContain('build');
+      expect(output).toContain('start');
+      expect(output).not.toContain('verbose');
     });
 
     it('should not interfere with command completion after boolean options', async () => {
@@ -124,24 +128,27 @@ describe.each(cliTools)('cli completion tests for %s', (cliTool) => {
       // This tests the case: option('quiet', 'Suppress output')
       const command = `${commandPrefix} dev --quiet ""`;
       const output = await runCommand(command);
-      // Should be treated as boolean flag (no value completion)
-      expect(output.trim()).toBe(':4');
+      // Should be treated as boolean flag — shows subcommands, not flag values
+      expect(output).toContain('build');
+      expect(output).not.toContain('quiet');
     });
 
     it('should handle option with alias only as boolean flag', async () => {
       // This tests the case: option('verbose', 'Enable verbose', 'v')
       const command = `${commandPrefix} dev --verbose ""`;
       const output = await runCommand(command);
-      // Should be treated as boolean flag (no value completion)
-      expect(output.trim()).toBe(':4');
+      // Should be treated as boolean flag — shows subcommands, not flag values
+      expect(output).toContain('build');
+      expect(output).not.toContain('verbose');
     });
 
     it('should handle option with alias only (short flag) as boolean flag', async () => {
       // This tests the short flag version: -v instead of --verbose
       const command = `${commandPrefix} dev -v ""`;
       const output = await runCommand(command);
-      // Should be treated as boolean flag (no value completion)
-      expect(output.trim()).toBe(':4');
+      // Should be treated as boolean flag — shows subcommands, not flag values
+      expect(output).toContain('build');
+      expect(output).not.toContain('verbose');
     });
 
     it('should handle option with handler only as value option', async () => {

@@ -101,6 +101,55 @@ export default function tab(instance: CommanderCommand): RootCommand {
   return t;
 }
 
+/**
+ * Detect whether a commander option flag expects a value argument.
+ * Options with `<value>` or `[value]` in their flags are value-taking.
+ */
+function optionTakesValue(flags: string): boolean {
+  return flags.includes('<') || flags.includes('[');
+}
+
+/**
+ * Register a commander option with the tab library, correctly setting
+ * isBoolean based on whether the option takes a value.
+ *
+ * The tab Command.option() method infers isBoolean from the argument types:
+ * - string arg → alias, isBoolean=true
+ * - function arg → handler, isBoolean=false
+ * So for value-taking options with an alias, we pass a no-op handler
+ * and the alias separately to get isBoolean=false.
+ */
+function registerOption(
+  tabCommand: {
+    option: (
+      value: string,
+      description: string,
+      handlerOrAlias?: ((...args: unknown[]) => void) | string,
+      alias?: string
+    ) => unknown;
+  },
+  flags: string,
+  longFlag: string,
+  description: string,
+  shortFlag?: string
+): void {
+  const takesValue = optionTakesValue(flags);
+  if (shortFlag) {
+    if (takesValue) {
+      // Pass a no-op handler to force isBoolean=false, with alias as 4th arg
+      tabCommand.option(longFlag, description, () => {}, shortFlag);
+    } else {
+      tabCommand.option(longFlag, description, shortFlag);
+    }
+  } else {
+    if (takesValue) {
+      tabCommand.option(longFlag, description, () => {});
+    } else {
+      tabCommand.option(longFlag, description);
+    }
+  }
+}
+
 function processRootCommand(command: CommanderCommand): void {
   // Add root command options to the root t instance
   for (const option of command.options) {
@@ -110,11 +159,7 @@ function processRootCommand(command: CommanderCommand): void {
     const longFlag = flags.match(/--([a-zA-Z0-9-]+)/)?.[1];
 
     if (longFlag) {
-      if (shortFlag) {
-        t.option(longFlag, option.description || '', shortFlag);
-      } else {
-        t.option(longFlag, option.description || '');
-      }
+      registerOption(t, flags, longFlag, option.description || '', shortFlag);
     }
   }
 }
@@ -141,11 +186,13 @@ function processSubcommands(rootCommand: CommanderCommand): void {
       const longFlag = flags.match(/--([a-zA-Z0-9-]+)/)?.[1];
 
       if (longFlag) {
-        if (shortFlag) {
-          command.option(longFlag, option.description || '', shortFlag);
-        } else {
-          command.option(longFlag, option.description || '');
-        }
+        registerOption(
+          command,
+          flags,
+          longFlag,
+          option.description || '',
+          shortFlag
+        );
       }
     }
   }

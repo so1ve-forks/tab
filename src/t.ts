@@ -349,9 +349,11 @@ export class RootCommand extends Command {
 
   // positional argument completion
   private handlePositionalCompletion(command: Command, previousArgs: string[]) {
+    // Strip options so flags don't inflate the positional index
+    const strippedArgs = this.stripOptions(previousArgs);
     // current argument position (subtract command name)
     const commandParts = command.value.split(' ').length;
-    const currentArgIndex = Math.max(0, previousArgs.length - commandParts);
+    const currentArgIndex = Math.max(0, strippedArgs.length - commandParts);
     const argumentEntries = Array.from(command.arguments.entries());
 
     if (argumentEntries.length > 0) {
@@ -438,20 +440,10 @@ export class RootCommand extends Command {
         lastPrevArg
       );
     } else {
-      if (lastPrevArg?.startsWith('-') && toComplete === '' && endsWithSpace) {
-        let option = this.findOption(this, lastPrevArg);
-        if (!option) {
-          for (const [, command] of this.commands) {
-            option = this.findOption(command, lastPrevArg);
-            if (option) break;
-          }
-        }
-
-        if (option && option.isBoolean) {
-          this.complete(toComplete);
-          return;
-        }
-      }
+      // Note: we intentionally do NOT early-return after detecting a boolean
+      // flag. The previous code called this.complete(toComplete) and returned
+      // here, which skipped positional argument completion. After a boolean
+      // flag like -f, the user may still be completing a positional argument.
 
       if (this.shouldCompleteCommands(toComplete)) {
         this.handleCommandCompletion(previousArgs, toComplete);
